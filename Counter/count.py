@@ -1,23 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+"""Backward-compatible one-click command: record a direct approach."""
 
-import sqlite3
-import time
-from time import sleep
-
-#this was needed because the records were not getting inserted
-sleep(0.1)
+import sys
+from cli import main
 
 
-#Insert into db 1 into the count feild and the date time of the event
-def InsertCount():
-    conn = sqlite3.connect('Counter.db')
-    Date = time.ctime()
-    Count = 1
-    conn.execute('INSERT INTO tb_count (COUNT, DATE) VALUES (?, ?)',
-                 (Count, Date))
-    conn.commit()
-    conn.close()
-
-#Call InsertCount to add a 1 to the count field
-InsertCount()
-
+if __name__ == "__main__":
+    raise SystemExit(main(["count", *sys.argv[1:]]))
