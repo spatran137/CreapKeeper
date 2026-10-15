@@ -31,6 +31,7 @@
     <Compile Include="system_tray.py" />
     <Compile Include="preferences.py" />
     <Compile Include="dashboard.py" />
+    <Compile Include="firewall.py" />
     <Compile Include="creap.py">
       <SubType>Code</SubType>
     </Compile>

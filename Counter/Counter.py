@@ -5,12 +5,14 @@ import argparse
 import os
 import queue
 import sqlite3
+import threading
 import webbrowser
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
 from dashboard import DashboardServer
+from firewall import firewall_status, request_firewall_install
 from global_hotkeys import GlobalHotkeys
 from preferences import load_settings, save_settings, settings_path
 from storage import add_event, database_path, export_csv, import_legacy, recent_events, totals, undo_last
@@ -27,6 +29,7 @@ class CounterApp(ttk.Frame):
         self._tray = SystemTray(self._events)
         self._dashboard = DashboardServer(db_path)
         self._closed = False
+        self._firewall_check_active = False
         self._settings_file = settings_path(db_path)
         self._settings = load_settings(self._settings_file)
         self.hotkeys_enabled = tk.BooleanVar(value=self._settings["global_hotkeys"])
@@ -115,6 +118,9 @@ class CounterApp(ttk.Frame):
         ttk.Button(
             tools_row, text="Copy LAN link", command=self.copy_dashboard_link
         ).pack(side="left", padx=8)
+        ttk.Button(
+            tools_row, text="Check firewall", command=self.check_firewall
+        ).pack(side="left")
         ttk.Button(
             tools_row, text="Hide to tray", command=self.hide_to_tray
         ).pack(side="right")
@@ -221,6 +227,7 @@ class CounterApp(ttk.Frame):
             self._tray.stop()
 
         if self.dashboard_enabled.get():
+            was_running = self._dashboard.running
             ok, result = self._dashboard.start()
             if not ok:
                 self.dashboard_enabled.set(False)
@@ -233,6 +240,10 @@ class CounterApp(ttk.Frame):
                 )
                 if not startup:
                     feedback.append(result)
+                if not was_running and os.name == "nt":
+                    # Check only when the LAN listener is first enabled.
+                    # The firewall inspection runs in a worker to keep Tk responsive.
+                    self.master.after(250, self.check_firewall)
         else:
             self._dashboard.stop()
             self.dashboard_address.set("LAN dashboard off")
@@ -265,6 +276,74 @@ class CounterApp(ttk.Frame):
         else:
             self.status.set("Enable LAN dashboard first.")
 
+    def check_firewall(self, offer_install: bool = True) -> None:
+        """Inspect existing firewall rules without requesting elevation."""
+        if os.name != "nt":
+            self.status.set("Automatic firewall setup is Windows-only.")
+            return
+        if not self._dashboard.running:
+            self.status.set("Enable LAN dashboard before checking firewall access.")
+            return
+        if self._firewall_check_active:
+            return
+        self._firewall_check_active = True
+        self.status.set("Checking existing Windows Firewall rules for TCP 8765...")
+
+        def worker() -> None:
+            try:
+                state, detail = firewall_status()
+            except Exception as exc:
+                state, detail = "error", str(exc)
+            self._events.put(("firewall-check", offer_install, state, detail))
+
+        threading.Thread(target=worker, daemon=True, name="CounterFirewallCheck").start()
+
+    def _firewall_result(self, offer_install: bool, state: str, detail: str) -> None:
+        self._firewall_check_active = False
+        if not self._dashboard.running:
+            return
+        if state == "present":
+            self.status.set(
+                f"Existing firewall rule found: {detail}. No changes required."
+            )
+        elif state == "missing":
+            if not offer_install:
+                self.status.set(
+                    "LAN firewall rule not detected yet. Finish the UAC prompt "
+                    "and click Check firewall to retry."
+                )
+                return
+            approved = messagebox.askyesno(
+                "Allow Counter on the local network?",
+                "Counter's dashboard is running locally, but no applicable "
+                "Windows Firewall rule was found.\n\n"
+                "Would you like Counter to request administrator approval "
+                "to add ONE inbound rule?\n\n"
+                "TCP port: 8765\n"
+                "Networks: Private and Domain ONLY\n"
+                "Remote addresses: Local subnet ONLY\n\n"
+                "Existing firewall rules will not be modified. "
+                "No public or internet access will be enabled.",
+                parent=self.master,
+            )
+            if approved:
+                started, information = request_firewall_install()
+                self.status.set(information)
+                if started:
+                    # Approval and execution are asynchronous. We only report
+                    # success if a later read-only check sees the new rule.
+                    self.master.after(8000, lambda: self.check_firewall(False))
+            else:
+                self.status.set(
+                    "Firewall rule not added. Dashboard works on this PC; "
+                    "other LAN devices may be blocked."
+                )
+        else:
+            self.status.set(
+                "Could not verify Windows Firewall: " + detail
+                + "  Check the rule manually or ask your administrator."
+            )
+
     def _drain_events(self) -> None:
         """Receive hotkeys/tray menu clicks only on the Tk main thread."""
         if self._closed:
@@ -274,7 +353,9 @@ class CounterApp(ttk.Frame):
                 action = self._events.get_nowait()
             except queue.Empty:
                 break
-            if action in ("count", "creap"):
+            if isinstance(action, tuple) and action[0] == "firewall-check":
+                self._firewall_result(*action[1:])
+            elif action in ("count", "creap"):
                 self.record(action)
             elif action == "undo":
                 self.undo()

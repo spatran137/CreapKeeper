@@ -13,6 +13,7 @@ The spelling **Creap** is deliberately preserved from the original scripts. This
 - **Windows global hotkeys** that work while another application has focus
 - **Optional system tray** with Show, Count, Creap, Undo, and Exit commands
 - **Opt-in LAN chart** with a read-only, offline webpage and two cumulative daily lines
+- **Consent-based Windows Firewall check** that reuses existing rules and offers a narrowly scoped rule if needed
 - Date/time-stamped SQLite history
 - Undo for accidental manual clicks
 - CSV export and idempotent import of the old 2017 database format
@@ -55,9 +56,21 @@ You can share a simple read-only two-line chart with colleagues on the same loca
 
 The page refreshes about every 30 seconds and shows **Count** and **Creap** as separate cumulative daily lines over the most recent 30 days, with overall totals. It shows aggregate counts only, not individual timestamps, event details, or file paths. The chart's HTML/JavaScript is self-contained: **no CDN, external fonts, external scripts, or internet access**.
 
-**Network configuration:** Windows Firewall may block connections from other computers. If it prompts you, allow `Counter.exe` on your **Private** or **Domain** network, not Public. If no prompt appears, an administrator can create a restricted rule for the location of your EXE (replace the path below):
+**Automatic Windows Firewall check (v1.1.1):** When LAN sharing is first enabled (including when Counter restarts with sharing enabled), Counter checks the **active** Windows Firewall rules in the background for an enabled inbound **allow** rule covering TCP port 8765 and a Private/Domain profile. A rule you created manually, such as **Creap Counter Dashboard**, is recognized if its application restriction permits Counter. If a suitable rule already exists, **nothing is added or modified**.
 
-    New-NetFirewallRule -DisplayName "Counter LAN Dashboard" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 -Program "C:\\Path\\To\\Counter.exe" -Profile Private,Domain -RemoteAddress LocalSubnet
+If a suitable rule is missing, Counter asks whether to create one. **Nothing changes unless you click Yes and approve the separate Windows administrator (UAC) prompt.** The requested rule allows **TCP 8765**, **Private/Domain network profiles only**, and **LocalSubnet remote clients only**; Public networks and internet port forwarding are not enabled. Counter does **not** run as administrator after setup. You can also click **Check firewall** to check again. It confirms success only after detecting the rule, not merely after launching UAC.
+
+Windows Firewall rules are **persistent**: disabling the LAN dashboard or exiting Counter stops the listener, but intentionally **does not delete or alter the firewall rule**. If you ever want to remove only the Counter-managed rule, use an elevated PowerShell window:
+
+    Remove-NetFirewallRule -Name "Counter-LAN-Dashboard-8765"
+
+This removal does not affect manually created or IT-managed rules with different identifiers.
+
+**Manual fallback (if UAC is declined or organizational policy blocks automatic changes):** In an elevated PowerShell terminal on the Counter computer, after checking that a matching rule does not already exist, run:
+
+    New-NetFirewallRule -Name "Counter-LAN-Dashboard-8765" -DisplayName "Counter LAN Dashboard" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 -Profile Private,Domain -RemoteAddress LocalSubnet
+
+**Troubleshooting:** On the Counter PC run `Get-NetTCPConnection -LocalPort 8765 -State Listen`; `0.0.0.0:8765` is the expected listener. On another PC, run `Test-NetConnection <COUNTER-PC-IP> -Port 8765`. If the TCP test fails, verify the Counter PC's active profile using `Get-NetConnectionProfile` and the effective firewall/endpoint security policies. Public-profile rules are intentionally not created. `LocalSubnet` generally excludes other VLANs, so cross-subnet clients may require an approved, narrowly scoped remote-address exception and any necessary inter-VLAN permissions. Having an inbound allow rule does not override higher-priority block rules or organizational Group Policy. The desktop firewall check detects applicable rule **configuration**, not guaranteed reachability from every client.
 
 LAN sharing is off by default. The server only accepts IPv4 loopback and common private/LAN address ranges, and rejects clients with public addresses. It has no write endpoints; no port-forwarding or public exposure is intended. If your workplace uses a segmented network or a VPN, access may be restricted by those rules. No password protection is provided; **any authorized device that can reach the LAN port can see the totals**.
 
@@ -120,7 +133,7 @@ From the repository root:
 
     python -m unittest discover -s tests -v
 
-The automated tests cover data creation, counts, undo, CSV export, legacy import, environment configuration, desktop settings, hotkey routing, and basic CLI operation. Automated tests do not emulate keyboard presses or an interactive desktop session. The desktop UI additionally requires a manual smoke test.
+The automated tests cover data creation, counts, undo, CSV export, legacy import, environment configuration, desktop settings, hotkey routing, LAN HTTP routes, read-only firewall inspection, UAC request handling (mocked), and basic CLI operation. Automated tests do not emulate keyboard presses or an interactive desktop session. The desktop UI additionally requires a manual smoke test.
 
 ## Original project
 
