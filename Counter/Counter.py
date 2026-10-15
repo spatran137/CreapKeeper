@@ -5,10 +5,12 @@ import argparse
 import os
 import queue
 import sqlite3
+import webbrowser
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
+from dashboard import DashboardServer
 from global_hotkeys import GlobalHotkeys
 from preferences import load_settings, save_settings, settings_path
 from storage import add_event, database_path, export_csv, import_legacy, recent_events, totals, undo_last
@@ -23,14 +25,17 @@ class CounterApp(ttk.Frame):
         self._events = queue.Queue()
         self._hotkeys = GlobalHotkeys(self._events)
         self._tray = SystemTray(self._events)
+        self._dashboard = DashboardServer(db_path)
         self._closed = False
         self._settings_file = settings_path(db_path)
         self._settings = load_settings(self._settings_file)
         self.hotkeys_enabled = tk.BooleanVar(value=self._settings["global_hotkeys"])
         self.tray_enabled = tk.BooleanVar(value=self._settings["system_tray"])
+        self.dashboard_enabled = tk.BooleanVar(value=self._settings["lan_dashboard"])
+        self.dashboard_address = tk.StringVar(value="LAN dashboard off")
 
         master.title("Counter - Office Encounter Tracker")
-        master.minsize(620, 530)
+        master.minsize(650, 600)
         self.pack(fill="both", expand=True)
 
         ttk.Label(self, text="Office Encounter Tracker", font=("Segoe UI", 17, "bold")).pack(anchor="w")
@@ -77,7 +82,7 @@ class CounterApp(ttk.Frame):
             self.history.column(name, width=width, stretch=(name == "when"))
         self.history.pack(fill="both", expand=True, pady=(3, 8))
 
-        settings = ttk.LabelFrame(self, text="Background controls (Windows)", padding=9)
+        settings = ttk.LabelFrame(self, text="Background controls", padding=9)
         settings.pack(fill="x", pady=(3, 7))
         hotkey_check = ttk.Checkbutton(
             settings, text="Global: Ctrl+Alt+1 (Count), Ctrl+Alt+2 (Creap), Ctrl+Alt+Z (Undo)",
@@ -92,9 +97,27 @@ class CounterApp(ttk.Frame):
         if os.name != "nt":
             hotkey_check.configure(state="disabled")
             tray_check.configure(state="disabled")
+        dashboard_check = ttk.Checkbutton(
+            settings,
+            text="Share read-only chart on local LAN (HTTP port 8765)",
+            variable=self.dashboard_enabled,
+            command=self.configure_background,
+        )
+        dashboard_check.pack(anchor="w", pady=(7, 0))
+        ttk.Label(
+            settings, textvariable=self.dashboard_address, wraplength=590
+        ).pack(anchor="w", padx=(22, 0), pady=(1, 4))
+        tools_row = ttk.Frame(settings)
+        tools_row.pack(fill="x")
         ttk.Button(
-            settings, text="Hide to tray", command=self.hide_to_tray
-        ).pack(anchor="e")
+            tools_row, text="Open dashboard", command=self.open_dashboard
+        ).pack(side="left")
+        ttk.Button(
+            tools_row, text="Copy LAN link", command=self.copy_dashboard_link
+        ).pack(side="left", padx=8)
+        ttk.Button(
+            tools_row, text="Hide to tray", command=self.hide_to_tray
+        ).pack(side="right")
 
         self.status = tk.StringVar(value=f"Database: {database_path(db_path)}")
         ttk.Label(self, textvariable=self.status, wraplength=580).pack(anchor="w")
@@ -197,9 +220,27 @@ class CounterApp(ttk.Frame):
         else:
             self._tray.stop()
 
+        if self.dashboard_enabled.get():
+            ok, result = self._dashboard.start()
+            if not ok:
+                self.dashboard_enabled.set(False)
+                feedback.append(result)
+                self.dashboard_address.set("LAN dashboard off")
+            else:
+                self.dashboard_address.set(
+                    "LAN address: " + self._dashboard.share_url +
+                    " (use your PC IPv4 address if its name does not resolve)"
+                )
+                if not startup:
+                    feedback.append(result)
+        else:
+            self._dashboard.stop()
+            self.dashboard_address.set("LAN dashboard off")
+
         effective = {
             "global_hotkeys": self.hotkeys_enabled.get(),
             "system_tray": self.tray_enabled.get(),
+            "lan_dashboard": self.dashboard_enabled.get(),
         }
         if effective != self._settings:
             try:
@@ -209,6 +250,20 @@ class CounterApp(ttk.Frame):
                 feedback.append(f"Could not save settings: {exc}")
         if feedback:
             self.status.set("  ".join(feedback))
+
+    def open_dashboard(self) -> None:
+        if self._dashboard.running:
+            webbrowser.open(self._dashboard.local_url)
+        else:
+            self.status.set("Enable LAN dashboard first.")
+
+    def copy_dashboard_link(self) -> None:
+        if self._dashboard.running:
+            self.master.clipboard_clear()
+            self.master.clipboard_append(self._dashboard.share_url)
+            self.status.set("Copied LAN dashboard link to clipboard.")
+        else:
+            self.status.set("Enable LAN dashboard first.")
 
     def _drain_events(self) -> None:
         """Receive hotkeys/tray menu clicks only on the Tk main thread."""
@@ -255,6 +310,7 @@ class CounterApp(ttk.Frame):
         if hasattr(self, "_poll_job"):
             self.master.after_cancel(self._poll_job)
         self._hotkeys.stop()
+        self._dashboard.stop()
         self._tray.stop()
         self.master.destroy()
 

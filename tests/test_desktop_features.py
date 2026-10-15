@@ -28,7 +28,7 @@ class PreferencesTests(unittest.TestCase):
         save_settings({"global_hotkeys": True, "system_tray": False}, self.file)
         self.assertEqual(
             load_settings(self.file),
-            {"global_hotkeys": True, "system_tray": False},
+            {"global_hotkeys": True, "system_tray": False, "lan_dashboard": False},
         )
         self.assertEqual(
             json.loads(self.file.read_text(encoding="utf-8"))["system_tray"], False
