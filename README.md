@@ -10,6 +10,8 @@ The spelling **Creap** is deliberately preserved from the original scripts. This
 ## What's new
 
 - Python 3 desktop GUI with two buttons and running totals
+- **Windows global hotkeys** that work while another application has focus
+- **Optional system tray** with Show, Count, Creap, Undo, and Exit commands
 - Date/time-stamped SQLite history
 - Undo for accidental manual clicks
 - CSV export and idempotent import of the old 2017 database format
@@ -18,7 +20,8 @@ The spelling **Creap** is deliberately preserved from the original scripts. This
 
 ## Requirements
 
-- **Python 3.10+**; no pip dependencies
+- **Python 3.10+**; no pip dependencies for the CLI or basic desktop app
+- To enable the tray icon while running the app from source, install `python -m pip install -r requirements-gui.txt`. The release executable bundles these packages.
 - GUI: Tkinter (included with the standard Windows Python installer; on some Linux systems install python3-tk)
 - Windows, Linux, or macOS
 
@@ -30,7 +33,13 @@ From the repository root:
 
 Click **+1 Count** for a direct interruption, or **+1 Creap** for a stealth encounter.
 
-Keyboard shortcuts: **Ctrl+1** (Count), **Ctrl+2** (Creap), **Ctrl+Z** (Undo).
+**Global Windows shortcuts (v1.0.1):** Ctrl+Alt+1 (Count), Ctrl+Alt+2 (Creap), Ctrl+Alt+Z (Undo). They work while other applications are active, so long as Counter is running with **Enable global hotkeys** checked. No special Windows administrator privileges or manual key bindings are needed. If another program already owns any combination, Counter reports the conflict and disables global shortcuts until you re-enable them.
+
+**Window-only shortcuts:** Ctrl+1 (Count), Ctrl+2 (Creap), Ctrl+Z (Undo). These still work while Counter has keyboard focus.
+
+**System tray (Windows):** The tray icon is enabled by default in the Windows release. With the tray checkbox enabled, closing the window hides Counter instead of exiting, and global shortcuts stay active. Right-click the notification-area icon to show Counter, record an event, undo, or **Exit Counter** to actually quit. You can disable the tray icon at any time in the window. The **Hide to tray** button does the same thing as closing the window with tray mode enabled.
+
+The app remembers both checkbox settings in `settings.json` next to your selected SQLite database. Existing history remains unchanged when upgrading from v1.0.0. Hotkeys and tray integration are currently **Windows-only**; the basic GUI and CLI work on other platforms.
 
 The GUI shows totals and 20 recent entries. **Undo last click** removes only the most recent manually recorded event. Imported history is left untouched.
 
@@ -91,7 +100,7 @@ From the repository root:
 
     python -m unittest discover -s tests -v
 
-The automated tests cover data creation, counts, undo, CSV export, legacy import, environment configuration, and basic CLI operation. The desktop UI additionally requires a manual smoke test.
+The automated tests cover data creation, counts, undo, CSV export, legacy import, environment configuration, desktop settings, hotkey routing, and basic CLI operation. Automated tests do not emulate keyboard presses or an interactive desktop session. The desktop UI additionally requires a manual smoke test.
 
 ## Original project
 

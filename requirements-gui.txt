@@ -1,0 +1,3 @@
+# Optional desktop system-tray dependencies; CLI and normal GUI do not require pip packages.
+pystray>=0.19.5,<0.20
+Pillow>=10,<13

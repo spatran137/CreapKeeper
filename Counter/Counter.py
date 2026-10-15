@@ -1,43 +1,53 @@
 #!/usr/bin/env python3
-"""Small desktop GUI for recording two kinds of office interruptions."""
+"""Counter GUI: manual event tracking with opt-in background controls."""
 
 import argparse
+import os
+import queue
 import sqlite3
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
+from global_hotkeys import GlobalHotkeys
+from preferences import load_settings, save_settings, settings_path
 from storage import add_event, database_path, export_csv, import_legacy, recent_events, totals, undo_last
+from system_tray import SystemTray
 
 
 class CounterApp(ttk.Frame):
     def __init__(self, master: tk.Tk, db_path: str | None = None) -> None:
-        super().__init__(master, padding=18)
+        super().__init__(master, padding=16)
         self.db_path = db_path
         self.master = master
-        self.master.title("Counter - Office Encounter Tracker")
-        self.master.minsize(560, 420)
+        self._events = queue.Queue()
+        self._hotkeys = GlobalHotkeys(self._events)
+        self._tray = SystemTray(self._events)
+        self._closed = False
+        self._settings_file = settings_path(db_path)
+        self._settings = load_settings(self._settings_file)
+        self.hotkeys_enabled = tk.BooleanVar(value=self._settings["global_hotkeys"])
+        self.tray_enabled = tk.BooleanVar(value=self._settings["system_tray"])
+
+        master.title("Counter - Office Encounter Tracker")
+        master.minsize(620, 530)
         self.pack(fill="both", expand=True)
 
         ttk.Label(self, text="Office Encounter Tracker", font=("Segoe UI", 17, "bold")).pack(anchor="w")
         ttk.Label(
-            self,
-            text="Two ways to interrupt someone. One very unofficial scoreboard.",
-        ).pack(anchor="w", pady=(3, 14))
+            self, text="Two ways to interrupt someone. One very unofficial scoreboard."
+        ).pack(anchor="w", pady=(3, 12))
 
         buttons = ttk.Frame(self)
         buttons.pack(fill="x")
-        left = ttk.LabelFrame(buttons, text="Direct approach", padding=12)
-        left.pack(side="left", fill="both", expand=True, padx=(0, 6))
-        right = ttk.LabelFrame(buttons, text="Stealth approach", padding=12)
-        right.pack(side="left", fill="both", expand=True, padx=(6, 0))
-
         self.direct_total = tk.StringVar(value="0")
         self.stealth_total = tk.StringVar(value="0")
-        for group, label, variable, kind in (
-            (left, "Count", self.direct_total, "count"),
-            (right, "Creap", self.stealth_total, "creap"),
+        for label, group_name, variable, kind, margin in (
+            ("Count", "Direct approach", self.direct_total, "count", (0, 6)),
+            ("Creap", "Stealth approach", self.stealth_total, "creap", (6, 0)),
         ):
+            group = ttk.LabelFrame(buttons, text=group_name, padding=12)
+            group.pack(side="left", fill="both", expand=True, padx=margin)
             ttk.Label(group, textvariable=variable, font=("Segoe UI", 25, "bold")).pack()
             ttk.Button(
                 group, text=f"+1 {label}", command=lambda value=kind: self.record(value)
@@ -45,17 +55,17 @@ class CounterApp(ttk.Frame):
 
         self.overall = tk.StringVar()
         ttk.Label(self, textvariable=self.overall, font=("Segoe UI", 11, "bold")).pack(
-            anchor="w", pady=(14, 7)
+            anchor="w", pady=(12, 7)
         )
         tools = ttk.Frame(self)
-        tools.pack(fill="x", pady=(0, 10))
+        tools.pack(fill="x", pady=(0, 9))
         ttk.Button(tools, text="Undo last click", command=self.undo).pack(side="left", padx=(0, 7))
         ttk.Button(tools, text="Export CSV", command=self.export).pack(side="left", padx=(0, 7))
         ttk.Button(tools, text="Import old DB", command=self.import_old).pack(side="left")
 
         ttk.Label(self, text="Recent encounters").pack(anchor="w")
         self.history = ttk.Treeview(
-            self, columns=("when", "kind", "quantity", "source"), show="headings", height=8
+            self, columns=("when", "kind", "quantity", "source"), show="headings", height=7
         )
         for name, title, width in (
             ("when", "Date / Time", 175),
@@ -67,12 +77,37 @@ class CounterApp(ttk.Frame):
             self.history.column(name, width=width, stretch=(name == "when"))
         self.history.pack(fill="both", expand=True, pady=(3, 8))
 
+        settings = ttk.LabelFrame(self, text="Background controls (Windows)", padding=9)
+        settings.pack(fill="x", pady=(3, 7))
+        hotkey_check = ttk.Checkbutton(
+            settings, text="Global: Ctrl+Alt+1 (Count), Ctrl+Alt+2 (Creap), Ctrl+Alt+Z (Undo)",
+            variable=self.hotkeys_enabled, command=self.configure_background,
+        )
+        hotkey_check.pack(anchor="w")
+        tray_check = ttk.Checkbutton(
+            settings, text="Show system tray icon; close the window to hide it",
+            variable=self.tray_enabled, command=self.configure_background,
+        )
+        tray_check.pack(anchor="w")
+        if os.name != "nt":
+            hotkey_check.configure(state="disabled")
+            tray_check.configure(state="disabled")
+        ttk.Button(
+            settings, text="Hide to tray", command=self.hide_to_tray
+        ).pack(anchor="e")
+
         self.status = tk.StringVar(value=f"Database: {database_path(db_path)}")
-        ttk.Label(self, textvariable=self.status, wraplength=510).pack(anchor="w")
-        master.bind("<Control-1>", lambda _: self.record("count"))
-        master.bind("<Control-2>", lambda _: self.record("creap"))
-        master.bind("<Control-z>", lambda _: self.undo())
+        ttk.Label(self, textvariable=self.status, wraplength=580).pack(anchor="w")
+
+        # Legacy shortcuts continue to work when this window is focused.
+        # Do not also fire them for Ctrl+Alt shortcuts handled by RegisterHotKey.
+        master.bind("<Control-1>", lambda e: self.record("count") if not e.state & 0x0008 else None)
+        master.bind("<Control-2>", lambda e: self.record("creap") if not e.state & 0x0008 else None)
+        master.bind("<Control-z>", lambda e: self.undo() if not e.state & 0x0008 else None)
+        master.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh()
+        self.configure_background(startup=True)
+        self._poll_job = master.after(75, self._drain_events)
 
     def _handle(self, action) -> None:
         try:
@@ -115,7 +150,7 @@ class CounterApp(ttk.Frame):
     def export(self) -> None:
         filename = filedialog.asksaveasfilename(
             parent=self.master, defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv")], title="Export encounter history"
+            filetypes=[("CSV files", "*.csv")], title="Export encounter history",
         )
         if filename:
             def work() -> None:
@@ -126,7 +161,7 @@ class CounterApp(ttk.Frame):
     def import_old(self) -> None:
         filename = filedialog.askopenfilename(
             parent=self.master, filetypes=[("SQLite databases", "*.db *.sqlite *.*")],
-            title="Select original Counter.db"
+            title="Select original Counter.db",
         )
         if filename:
             def work() -> None:
@@ -134,6 +169,94 @@ class CounterApp(ttk.Frame):
                 self.refresh()
                 self.status.set(f"Imported {count} legacy records (duplicates skipped).")
             self._handle(work)
+
+    def configure_background(self, startup: bool = False) -> None:
+        """Apply and persist only successfully activated user preferences."""
+        feedback = []
+        if self.hotkeys_enabled.get():
+            ok, result = self._hotkeys.start()
+            if not ok:
+                self.hotkeys_enabled.set(False)
+                feedback.append(result)
+            elif not startup:
+                feedback.append(result)
+        else:
+            self._hotkeys.stop()
+
+        if self.tray_enabled.get():
+            if os.name != "nt":
+                self.tray_enabled.set(False)
+                feedback.append("System tray is currently Windows-only.")
+            else:
+                ok, result = self._tray.start()
+                if not ok:
+                    self.tray_enabled.set(False)
+                    feedback.append(result)
+                elif not startup:
+                    feedback.append(result)
+        else:
+            self._tray.stop()
+
+        effective = {
+            "global_hotkeys": self.hotkeys_enabled.get(),
+            "system_tray": self.tray_enabled.get(),
+        }
+        if effective != self._settings:
+            try:
+                save_settings(effective, self._settings_file)
+                self._settings = effective
+            except OSError as exc:
+                feedback.append(f"Could not save settings: {exc}")
+        if feedback:
+            self.status.set("  ".join(feedback))
+
+    def _drain_events(self) -> None:
+        """Receive hotkeys/tray menu clicks only on the Tk main thread."""
+        if self._closed:
+            return
+        for _ in range(50):
+            try:
+                action = self._events.get_nowait()
+            except queue.Empty:
+                break
+            if action in ("count", "creap"):
+                self.record(action)
+            elif action == "undo":
+                self.undo()
+            elif action == "show":
+                self.master.deiconify()
+                self.master.lift()
+            elif action == "exit":
+                self.exit_app()
+                return
+            elif action == "tray-error":
+                self.tray_enabled.set(False)
+                self.configure_background()
+                self.status.set("System tray stopped unexpectedly.")
+        self._poll_job = self.master.after(75, self._drain_events)
+
+    def hide_to_tray(self) -> None:
+        if self.tray_enabled.get() and self._tray.running:
+            self.master.withdraw()
+        else:
+            self.status.set("Enable the tray icon before hiding the window.")
+
+    def on_close(self) -> None:
+        """Close-to-tray if enabled, otherwise exit."""
+        if self.tray_enabled.get() and self._tray.running:
+            self.hide_to_tray()
+        else:
+            self.exit_app()
+
+    def exit_app(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        if hasattr(self, "_poll_job"):
+            self.master.after_cancel(self._poll_job)
+        self._hotkeys.stop()
+        self._tray.stop()
+        self.master.destroy()
 
 
 def main() -> None:
