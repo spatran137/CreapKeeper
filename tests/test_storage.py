@@ -7,7 +7,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -66,7 +66,7 @@ class StorageTests(unittest.TestCase):
 
     def test_import_legacy_is_idempotent_and_preserves_counts(self):
         legacy = self.folder / "old.db"
-        with sqlite3.connect(legacy) as connection:
+        with closing(sqlite3.connect(legacy)) as connection:
             connection.execute('CREATE TABLE tb_count ("COUNT" INTEGER, "CREAP" INTEGER, "DATE" TEXT)')
             connection.executemany(
                 'INSERT INTO tb_count ("COUNT", "CREAP", "DATE") VALUES (?, ?, ?)',
@@ -76,6 +76,7 @@ class StorageTests(unittest.TestCase):
                     (3, None, "Tue Dec 12 12:10:00 2017"),
                 ],
             )
+            connection.commit()
         self.assertEqual(import_legacy(legacy, self.db), 3)
         self.assertEqual(import_legacy(legacy, self.db), 0)
         self.assertEqual(totals(self.db), {"count": 4, "creap": 1})
@@ -89,7 +90,7 @@ class StorageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             import_legacy(self.db, self.db)
         other = self.folder / "empty.db"
-        with sqlite3.connect(other):
+        with closing(sqlite3.connect(other)):
             pass
         with self.assertRaises(ValueError):
             import_legacy(other, self.db)
