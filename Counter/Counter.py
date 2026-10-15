@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Counter GUI: manual event tracking with opt-in background controls."""
+"""CreapKeeper GUI: manual event tracking with opt-in background controls."""
 
 import argparse
 import os
@@ -37,13 +37,13 @@ class CounterApp(ttk.Frame):
         self.dashboard_enabled = tk.BooleanVar(value=self._settings["lan_dashboard"])
         self.dashboard_address = tk.StringVar(value="LAN dashboard off")
 
-        master.title("Counter - Office Encounter Tracker")
+        master.title("CreapKeeper — Office Encounter Tracker")
         master.minsize(650, 600)
         self.pack(fill="both", expand=True)
 
-        ttk.Label(self, text="Office Encounter Tracker", font=("Segoe UI", 17, "bold")).pack(anchor="w")
+        ttk.Label(self, text="CreapKeeper", font=("Segoe UI", 17, "bold")).pack(anchor="w")
         ttk.Label(
-            self, text="Two ways to interrupt someone. One very unofficial scoreboard."
+            self, text="Tracking unsolicited office encounters since 2017."
         ).pack(anchor="w", pady=(3, 12))
 
         buttons = ttk.Frame(self)
@@ -142,7 +142,7 @@ class CounterApp(ttk.Frame):
         try:
             action()
         except (OSError, sqlite3.Error, ValueError) as exc:
-            messagebox.showerror("Counter error", str(exc), parent=self.master)
+            messagebox.showerror("CreapKeeper error", str(exc), parent=self.master)
 
     def refresh(self) -> None:
         def work() -> None:
@@ -179,7 +179,7 @@ class CounterApp(ttk.Frame):
     def export(self) -> None:
         filename = filedialog.asksaveasfilename(
             parent=self.master, defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv")], title="Export encounter history",
+            filetypes=[("CSV files", "*.csv")], title="Export CreapKeeper encounter history",
         )
         if filename:
             def work() -> None:
@@ -266,7 +266,7 @@ class CounterApp(ttk.Frame):
         if self._dashboard.running:
             webbrowser.open(self._dashboard.local_url)
         else:
-            self.status.set("Enable LAN dashboard first.")
+            self.status.set("Enable The Creap Report LAN dashboard first.")
 
     def copy_dashboard_link(self) -> None:
         if self._dashboard.running:
@@ -274,7 +274,7 @@ class CounterApp(ttk.Frame):
             self.master.clipboard_append(self._dashboard.share_url)
             self.status.set("Copied LAN dashboard link to clipboard.")
         else:
-            self.status.set("Enable LAN dashboard first.")
+            self.status.set("Enable The Creap Report LAN dashboard first.")
 
     def check_firewall(self, offer_install: bool = True) -> None:
         """Inspect existing firewall rules without requesting elevation."""
@@ -296,7 +296,7 @@ class CounterApp(ttk.Frame):
                 state, detail = "error", str(exc)
             self._events.put(("firewall-check", offer_install, state, detail))
 
-        threading.Thread(target=worker, daemon=True, name="CounterFirewallCheck").start()
+        threading.Thread(target=worker, daemon=True, name="CreapKeeperFirewallCheck").start()
 
     def _firewall_result(self, offer_install: bool, state: str, detail: str) -> None:
         self._firewall_check_active = False
@@ -314,10 +314,10 @@ class CounterApp(ttk.Frame):
                 )
                 return
             approved = messagebox.askyesno(
-                "Allow Counter on the local network?",
-                "Counter's dashboard is running locally, but no applicable "
+                "Allow CreapKeeper on the local network?",
+                "CreapKeeper's dashboard is running locally, but no applicable "
                 "Windows Firewall rule was found.\n\n"
-                "Would you like Counter to request administrator approval "
+                "Would you like CreapKeeper to request administrator approval "
                 "to add ONE inbound rule?\n\n"
                 "TCP port: 8765\n"
                 "Networks: Private and Domain ONLY\n"
@@ -397,7 +397,7 @@ class CounterApp(ttk.Frame):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Counter desktop interface")
+    parser = argparse.ArgumentParser(description="CreapKeeper desktop interface")
     parser.add_argument("--db", help="Override database location")
     args = parser.parse_args()
     root = tk.Tk()

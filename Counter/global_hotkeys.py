@@ -57,7 +57,7 @@ class GlobalHotkeys:
         self._error = None
         self._registered = set()
         self._thread = threading.Thread(
-            target=self._listen, daemon=True, name="CounterGlobalHotkeys"
+            target=self._listen, daemon=True, name="CreapKeeperGlobalHotkeys"
         )
         self._thread.start()
         if not self._ready.wait(timeout=5):

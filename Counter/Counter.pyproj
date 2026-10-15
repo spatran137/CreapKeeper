@@ -9,8 +9,8 @@
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>Counter</Name>
-    <RootNamespace>Counter</RootNamespace>
+    <Name>CreapKeeper</Name>
+    <RootNamespace>CreapKeeper</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -25,6 +25,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Counter.py" />
+    <Compile Include="CreapKeeper.py" />
     <Compile Include="cli.py" />
     <Compile Include="storage.py" />
     <Compile Include="global_hotkeys.py" />
