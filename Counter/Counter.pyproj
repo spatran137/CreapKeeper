@@ -25,6 +25,8 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Counter.py" />
+    <Compile Include="cli.py" />
+    <Compile Include="storage.py" />
     <Compile Include="creap.py">
       <SubType>Code</SubType>
     </Compile>
