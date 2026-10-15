@@ -1,4 +1,4 @@
-"""Read-only LAN dashboard served by the Counter desktop process.
+"""The Creap Report: read-only LAN dashboard served by CreapKeeper.
 
 No internet/CDN, extra server, data uploads, or write endpoints are needed.
 Only localhost and private IPv4 LAN clients can read the aggregate JSON.
@@ -101,7 +101,7 @@ def lan_url(port: int = DASHBOARD_PORT) -> str:
 def make_handler(db_path: str | Path | None):
     """One instance for the server: no filesystem browsing or write routes."""
     class Handler(BaseHTTPRequestHandler):
-        server_version = "CounterLAN/1.0"
+        server_version = "CreapKeeperLAN/1.0"
         sys_version = ""
 
         def log_message(self, format: str, *args: object) -> None:
@@ -164,7 +164,7 @@ def make_handler(db_path: str | Path | None):
 
 
 class DashboardServer:
-    """Small read-only server that starts and stops with Counter."""
+    """Small read-only server that starts and stops with CreapKeeper."""
 
     def __init__(
         self,
@@ -205,7 +205,7 @@ class DashboardServer:
                 target=server.serve_forever,
                 kwargs={"poll_interval": 0.1},
                 daemon=True,
-                name="CounterDashboard",
+                name="CreapKeeperDashboard",
             )
             self._thread.start()
             return True, f"LAN dashboard: {self.share_url}"

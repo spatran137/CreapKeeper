@@ -2,7 +2,7 @@
 
 Does NOT change the firewall while inspecting it. If an applicable rule is missing,
 the GUI may ask permission before explicitly launching a UAC-elevated PowerShell
-helper. No permanent administrator privileges are needed for Counter.
+helper. No permanent administrator privileges are needed for CreapKeeper.
 """
 
 from __future__ import annotations
@@ -54,10 +54,10 @@ try {
         # Never replace, enable or widen any rule without a separate explicit action.
         $managed = @(Get-NetFirewallRule -Name 'Counter-LAN-Dashboard-8765' -ErrorAction SilentlyContinue)
         if ($managed.Count -gt 0) {
-            throw 'The Counter-managed rule already exists but is not applicable. Inspect it in Windows Defender Firewall.'
+            throw 'The CreapKeeper-managed rule already exists but is not applicable. Inspect it in Windows Defender Firewall.'
         }
-        New-NetFirewallRule -Name 'Counter-LAN-Dashboard-8765' -DisplayName 'Counter LAN Dashboard' -Description 'Read-only Counter dashboard; TCP 8765 from the local subnet only.' -Direction Inbound -Action Allow -Enabled True -Protocol TCP -LocalPort 8765 -Profile Private,Domain -RemoteAddress LocalSubnet -ErrorAction Stop | Out-Null
-        Write-Output 'CREATED: Counter LAN Dashboard'
+        New-NetFirewallRule -Name 'Counter-LAN-Dashboard-8765' -DisplayName 'CreapKeeper LAN Dashboard' -Description 'Read-only CreapKeeper dashboard; TCP 8765 from the local subnet only.' -Direction Inbound -Action Allow -Enabled True -Protocol TCP -LocalPort 8765 -Profile Private,Domain -RemoteAddress LocalSubnet -ErrorAction Stop | Out-Null
+        Write-Output 'CREATED: CreapKeeper LAN Dashboard'
         exit 0
     }
     Write-Output 'MISSING'
@@ -87,7 +87,7 @@ def firewall_status() -> tuple[str, str]:
     """Return ('present'|'missing'|'error'|'unsupported', explanation).
 
     Existing enabled inbound allow rules must cover TCP 8765, be applicable
-    to Counter (or all programs), and cover Private/Domain profiles.
+    to CreapKeeper (or all programs), and cover Private/Domain profiles.
     Windows/organization firewall policies may still restrict LAN traffic.
     """
     if os.name != "nt":

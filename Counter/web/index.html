@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Counter — Office Encounter Tracker</title>
+  <title>The Creap Report — CreapKeeper</title>
   <style>
     :root { color-scheme:dark; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:#0e1524; color:#f1f5fb; }
     * { box-sizing:border-box; }
@@ -53,8 +53,8 @@
 <main>
   <header>
     <div>
-      <div class="eyebrow">A very unofficial scoreboard</div>
-      <h1>Counter Dashboard</h1>
+      <div class="eyebrow">CreapKeeper · A very unofficial scoreboard</div>
+      <h1>The Creap Report</h1>
       <p>Some interruptions are announced. Others just appear behind you.</p>
     </div>
     <span class="status"><span class="dot" aria-hidden="true"></span><span id="status">Connecting…</span></span>
@@ -144,7 +144,7 @@ async function refresh() {
     $("error").textContent = "";
   } catch (err) {
     $("status").textContent = "Unable to refresh";
-    $("error").textContent = "Counter is unavailable. The page will retry automatically.";
+    $("error").textContent = "CreapKeeper is unavailable. The page will retry automatically.";
   }
 }
 refresh();

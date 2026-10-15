@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Command-line interface for Counter; works without a graphical desktop."""
+"""Command-line interface for CreapKeeper; works without a graphical desktop."""
 
 import argparse
 import sqlite3
@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
             count = import_legacy(args.file, args.db)
             print(f"Imported {count} legacy records (existing ones skipped).")
     except (OSError, sqlite3.Error, ValueError) as exc:
-        parser.exit(1, f"Counter error: {exc}\n")
+        parser.exit(1, f"CreapKeeper error: {exc}\n")
     return 0
 
 

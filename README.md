@@ -1,6 +1,8 @@
-# Counter — Office Encounter Tracker
+# CreapKeeper — Office Encounter Tracker
 
-*Because apparently office interruptions needed their own analytics platform.*
+*Tracking unsolicited office encounters since 2017.*
+
+**CreapKeeper** is the grown-up name for the gloriously unnecessary original **Counter** project. The buttons are still **Count** and **Creap**, because the joke is older than the rebrand.
 
 Back in **2017**, a coworker had a special talent for interrupting the people around him in one of two ways:
 
@@ -13,7 +15,7 @@ Naturally, we responded like responsible IT professionals: **we made a counter.*
 
 **"Creap" is spelled that way on purpose.** The misspelling was part of the original **inside joke**, and it stays. It isn't a typo, a feature request, or an invitation for spellcheck to get involved. Please do not "fix" it to *creep*. That would ruin the historical record.
 
-> **A quick reality check:** Counter tracks **manual button presses, not people**. No cameras, microphones, sneaky detection systems, or employee-monitoring features. Just an extremely unnecessary amount of technology dedicated to a very specific running joke.
+> **A quick reality check:** CreapKeeper tracks **manual button presses, not people**. No cameras, microphones, sneaky detection systems, or employee-monitoring features. Just an extremely unnecessary amount of technology dedicated to a very specific running joke.
 
 ## Features (the joke got out of hand)
 
@@ -28,6 +30,14 @@ Naturally, we responded like responsible IT professionals: **we made a counter.*
 - Headless command-line interface for shortcuts and scripts
 - Automatic database creation, data validation, and standard-library tests
 
+## Download and upgrade
+
+The portable Windows app is now **[CreapKeeper.exe](https://github.com/spatran137/CreapKeeper/releases/latest)**. Close the old `Counter.exe` *completely* (use Exit in the tray), then launch `CreapKeeper.exe`. No Python installation is necessary.
+
+**Your counts are safe:** We intentionally retain the old default `%LOCALAPPDATA%\Counter\Counter.db` file and adjacent `settings.json`. The `COUNTER_DB_PATH` setting and the `count` and `creap` event identifiers are unchanged. **Do not rename or delete the old data directory.** This is a new name, not a migration.
+
+A Windows Firewall rule tied to the old `Counter.exe` path may not apply to the newly named executable. Port-only TCP 8765 rules should keep working; use the application's **Check firewall** button to verify access.
+
 ## Requirements (mercifully reasonable)
 
 - **Python 3.10+**; no pip dependencies for the CLI or basic desktop app
@@ -39,7 +49,9 @@ Naturally, we responded like responsible IT professionals: **we made a counter.*
 
 From the repository root:
 
-    python Counter/Counter.py
+    python Counter/CreapKeeper.py
+
+The historical `python Counter/Counter.py` launcher continues to work, too.
 
 Click **+1 Count** when someone announces their presence, or **+1 Creap** when they appear behind you like an NPC whose footstep audio failed to load.
 
@@ -47,9 +59,9 @@ Click **+1 Count** when someone announces their presence, or **+1 Creap** when t
 
 **Window-only shortcuts:** Ctrl+1 (Count), Ctrl+2 (Creap), Ctrl+Z (Undo). These still work while Counter has keyboard focus.
 
-**System tray (Windows):** The tray icon is enabled by default in the Windows release. With the tray checkbox enabled, closing the window hides Counter instead of exiting, and global shortcuts stay active. Right-click the notification-area icon to show Counter, record an event, undo, or **Exit Counter** to actually quit. You can disable the tray icon at any time in the window. The **Hide to tray** button does the same thing as closing the window with tray mode enabled.
+**System tray (Windows):** The tray icon is enabled by default in the Windows release. With the tray checkbox enabled, closing the window hides CreapKeeper instead of exiting, and global shortcuts stay active. Right-click the notification-area icon to show CreapKeeper, record an event, undo, or **Exit CreapKeeper** to actually quit. You can disable the tray icon at any time in the window. The **Hide to tray** button does the same thing as closing the window with tray mode enabled.
 
-The app remembers both checkbox settings in `settings.json` next to your selected SQLite database. Existing history remains unchanged when upgrading from v1.0.0. Hotkeys and tray integration are currently **Windows-only**; the basic GUI and CLI work on other platforms.
+The app remembers the hotkey, tray and dashboard settings in `settings.json` next to your selected SQLite database. Existing history remains unchanged when upgrading from v1.0.0. Hotkeys and tray integration are currently **Windows-only**; the basic GUI and CLI work on other platforms.
 
 The GUI shows totals and 20 recent entries. **Undo last click** removes only the most recent manually recorded event. Imported history remains untouched; even this project has standards.
 
@@ -57,7 +69,7 @@ The GUI shows totals and 20 recent entries. **Undo last click** removes only the
 
 Because apparently tracking this privately wasn't enough, you can share a simple read-only two-line chart with colleagues on the same local network **without** NGINX, Docker, a cloud host, or uploading your database. We showed remarkable restraint here.
 
-1. Run the updated **Counter.exe** on the computer that records your events.
+1. Run **CreapKeeper.exe** on the computer that records your events.
 2. Enable **Share read-only chart on local LAN (HTTP port 8765)** in the Counter window.
 3. Click **Open dashboard** to preview it on that PC, or **Copy LAN link** to share an address such as `http://YOUR-PC:8765/`.
 4. Other users can view the page while Counter is running. If computer-name resolution doesn't work, use `http://YOUR-PC-IP:8765/` instead.
@@ -66,7 +78,7 @@ The page refreshes about every 30 seconds and shows **Count** and **Creap** as s
 
 **Automatic Windows Firewall check (v1.1.1 — the plot thickens):** When LAN sharing is first enabled (including when Counter restarts with sharing enabled), Counter checks the **active** Windows Firewall rules in the background for an enabled inbound **allow** rule covering TCP port 8765 and a Private/Domain profile. A rule you created manually, such as **Creap Counter Dashboard**, is recognized if its application restriction permits Counter. If a suitable rule already exists, **nothing is added or modified**.
 
-If a suitable rule is missing, Counter asks whether to create one. **Nothing changes unless you click Yes and approve the separate Windows administrator (UAC) prompt.** The requested rule allows **TCP 8765**, **Private/Domain network profiles only**, and **LocalSubnet remote clients only**; Public networks and internet port forwarding are not enabled. Counter does **not** run as administrator after setup. You can also click **Check firewall** to check again. It confirms success only after detecting the rule, not merely after launching UAC.
+If a suitable rule is missing, Counter asks whether to create one. **Nothing changes unless you click Yes and approve the separate Windows administrator (UAC) prompt.** The requested rule allows **TCP 8765**, **Private/Domain network profiles only**, and **LocalSubnet remote clients only**; Public networks and internet port forwarding are not enabled. CreapKeeper does **not** run as administrator after setup. You can also click **Check firewall** to check again. It confirms success only after detecting the rule, not merely after launching UAC.
 
 Windows Firewall rules are **persistent**: disabling the LAN dashboard or exiting Counter stops the listener, but intentionally **does not delete or alter the firewall rule**. If you ever want to remove only the Counter-managed rule, use an elevated PowerShell window:
 
@@ -82,7 +94,7 @@ This removal does not affect manually created or IT-managed rules with different
 
 LAN sharing is off by default. The server only accepts IPv4 loopback and common private/LAN address ranges, and rejects clients with public addresses. It has no write endpoints; no port-forwarding or public exposure is intended. If your workplace uses a segmented network or a VPN, access may be restricted by those rules. No password protection is provided; **any authorized device that can reach the LAN port can see the totals**.
 
-The built-in server stops when you uncheck LAN sharing or exit Counter. Closing the window to the tray keeps it running, including the dashboard, until you select **Exit Counter**.
+The built-in server stops when you uncheck LAN sharing or exit CreapKeeper. Closing the window to the tray keeps it running, including the dashboard, until you select **Exit CreapKeeper**.
 
 ## Command-line usage (for the terminally committed)
 
@@ -103,7 +115,7 @@ Or use the consolidated interface:
 To choose a specific database, add **--db PATH** after a command:
 
     python Counter/cli.py stats --db C:\Temp\Counter.db
-    python Counter/Counter.py --db C:\Temp\Counter.db
+    python Counter/CreapKeeper.py --db C:\Temp\Counter.db
 
 You can also set the **COUNTER_DB_PATH** environment variable to a file path. That setting works with the GUI, CLI, and original scripts.
 
@@ -117,7 +129,7 @@ By default, the SQLite file is stored outside your Git checkout:
 | Linux | ~/.local/share/counter/Counter.db |
 | macOS | ~/.local/share/counter/Counter.db |
 
-On Linux, XDG_DATA_HOME is respected. Counter does not make outbound network connections. The optional LAN dashboard is disabled by default and only shares aggregate data after you enable it.
+On Linux, XDG_DATA_HOME is respected. CreapKeeper does not make outbound network connections. The optional LAN dashboard is disabled by default and only shares aggregate data after you enable it.
 
 ## Import your original 2017 database (preserve the legend)
 
@@ -145,6 +157,6 @@ The automated tests cover data creation, counts, undo, CSV export, legacy import
 
 ## Original project (circa 2017)
 
-The original Visual Studio solution (`Counter.sln`) and Python project are retained for posterity. A normal terminal is sufficient to run the app; a time machine is optional.
+The original Visual Studio solution (`Counter.sln`) and source-file paths are retained for posterity and compatibility. A normal terminal is sufficient to run the app; a time machine is optional.
 
-Counter is meant to be a **good-natured inside joke**, not a tool for embarrassing or singling out coworkers. Keep it anonymous, keep it friendly, and remember: the funniest part is that someone eventually gave this thing a web server.
+CreapKeeper is meant to be a **good-natured inside joke**, not a tool for embarrassing or singling out coworkers. Keep it anonymous, keep it friendly, and remember: the funniest part is that someone eventually gave this thing a web server.

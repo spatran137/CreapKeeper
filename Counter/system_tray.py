@@ -31,24 +31,24 @@ class SystemTray:
         image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
         draw.rounded_rectangle((3, 3, 60, 60), radius=14, fill="#243147")
-        draw.text((17, 13), "C", fill="#F0FAFF", stroke_width=1)
+        draw.text((17, 20), "CK", fill="#F0FAFF", stroke_width=1)
 
         def publish(action: str):
             return lambda icon, item: self.events.put(action)
 
         menu = pystray.Menu(
-            pystray.MenuItem("Show Counter", publish("show"), default=True),
+            pystray.MenuItem("Show CreapKeeper", publish("show"), default=True),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("+1 Count (direct)", publish("count")),
             pystray.MenuItem("+1 Creap (stealth)", publish("creap")),
             pystray.MenuItem("Undo last click", publish("undo")),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Exit Counter", publish("exit")),
+            pystray.MenuItem("Exit CreapKeeper", publish("exit")),
         )
         self.error = None
-        self._icon = pystray.Icon("Counter", image, "Counter - Office Encounter Tracker", menu)
+        self._icon = pystray.Icon("CreapKeeper", image, "CreapKeeper — Office Encounter Tracker", menu)
         self._thread = threading.Thread(
-            target=self._run, name="CounterTray", daemon=True
+            target=self._run, name="CreapKeeperTray", daemon=True
         )
         self._thread.start()
         return True, "System tray enabled. Close the window to hide it; use the tray menu to reopen."

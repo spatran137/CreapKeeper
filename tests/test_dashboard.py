@@ -64,7 +64,7 @@ class DashboardTests(unittest.TestCase):
         with opener.open(server.local_url, timeout=5) as response:
             page = response.read().decode("utf-8")
             self.assertEqual(response.status, 200)
-            self.assertIn("Counter Dashboard", page)
+            self.assertIn("The Creap Report", page)
             self.assertIn("/counts.json", page)
             self.assertEqual(response.headers["Cache-Control"], "no-store, max-age=0")
         with opener.open(server.local_url + "counts.json", timeout=5) as response:
