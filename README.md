@@ -12,6 +12,7 @@ The spelling **Creap** is deliberately preserved from the original scripts. This
 - Python 3 desktop GUI with two buttons and running totals
 - **Windows global hotkeys** that work while another application has focus
 - **Optional system tray** with Show, Count, Creap, Undo, and Exit commands
+- **Opt-in LAN chart** with a read-only, offline webpage and two cumulative daily lines
 - Date/time-stamped SQLite history
 - Undo for accidental manual clicks
 - CSV export and idempotent import of the old 2017 database format
@@ -42,6 +43,25 @@ Click **+1 Count** for a direct interruption, or **+1 Creap** for a stealth enco
 The app remembers both checkbox settings in `settings.json` next to your selected SQLite database. Existing history remains unchanged when upgrading from v1.0.0. Hotkeys and tray integration are currently **Windows-only**; the basic GUI and CLI work on other platforms.
 
 The GUI shows totals and 20 recent entries. **Undo last click** removes only the most recent manually recorded event. Imported history is left untouched.
+
+## LAN dashboard (v1.1.0)
+
+You can share a simple read-only two-line chart with colleagues on the same local network **without** NGINX, Docker, a cloud host, or uploading your database.
+
+1. Run the updated **Counter.exe** on the computer that records your events.
+2. Enable **Share read-only chart on local LAN (HTTP port 8765)** in the Counter window.
+3. Click **Open dashboard** to preview it on that PC, or **Copy LAN link** to share an address such as `http://YOUR-PC:8765/`.
+4. Other users can view the page while Counter is running. If computer-name resolution doesn't work, use `http://YOUR-PC-IP:8765/` instead.
+
+The page refreshes about every 30 seconds and shows **Count** and **Creap** as separate cumulative daily lines over the most recent 30 days, with overall totals. It shows aggregate counts only, not individual timestamps, event details, or file paths. The chart's HTML/JavaScript is self-contained: **no CDN, external fonts, external scripts, or internet access**.
+
+**Network configuration:** Windows Firewall may block connections from other computers. If it prompts you, allow `Counter.exe` on your **Private** or **Domain** network, not Public. If no prompt appears, an administrator can create a restricted rule for the location of your EXE (replace the path below):
+
+    New-NetFirewallRule -DisplayName "Counter LAN Dashboard" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 -Program "C:\\Path\\To\\Counter.exe" -Profile Private,Domain -RemoteAddress LocalSubnet
+
+LAN sharing is off by default. The server only accepts IPv4 loopback and common private/LAN address ranges, and rejects clients with public addresses. It has no write endpoints; no port-forwarding or public exposure is intended. If your workplace uses a segmented network or a VPN, access may be restricted by those rules. No password protection is provided; **any authorized device that can reach the LAN port can see the totals**.
+
+The built-in server stops when you uncheck LAN sharing or exit Counter. Closing the window to the tray keeps it running, including the dashboard, until you select **Exit Counter**.
 
 ## Command-line usage
 
@@ -76,7 +96,7 @@ By default, the SQLite file is stored outside your Git checkout:
 | Linux | ~/.local/share/counter/Counter.db |
 | macOS | ~/.local/share/counter/Counter.db |
 
-On Linux, XDG_DATA_HOME is respected. The application doesn't connect to the network or share its data.
+On Linux, XDG_DATA_HOME is respected. Counter does not make outbound network connections. The optional LAN dashboard is disabled by default and only shares aggregate data after you enable it.
 
 ## Import your original 2017 database
 

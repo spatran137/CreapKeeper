@@ -11,6 +11,7 @@ from storage import database_path
 DEFAULTS = {
     "global_hotkeys": os.name == "nt",
     "system_tray": os.name == "nt",
+    "lan_dashboard": False,  # Never expose network service without opting in.
 }
 
 

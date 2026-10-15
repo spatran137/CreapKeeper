@@ -30,6 +30,7 @@
     <Compile Include="global_hotkeys.py" />
     <Compile Include="system_tray.py" />
     <Compile Include="preferences.py" />
+    <Compile Include="dashboard.py" />
     <Compile Include="creap.py">
       <SubType>Code</SubType>
     </Compile>
