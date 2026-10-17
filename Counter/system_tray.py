@@ -42,6 +42,7 @@ class SystemTray:
             pystray.MenuItem("+1 Count (direct)", publish("count")),
             pystray.MenuItem("+1 Creap (stealth)", publish("creap")),
             pystray.MenuItem("Undo last click", publish("undo")),
+            pystray.MenuItem("Check for updates", publish("check-updates")),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Exit CreapKeeper", publish("exit")),
         )

@@ -17,6 +17,10 @@ from global_hotkeys import GlobalHotkeys
 from preferences import load_settings, save_settings, settings_path
 from storage import add_event, database_path, export_csv, import_legacy, recent_events, totals, undo_last
 from system_tray import SystemTray
+from updates import (
+    APP_VERSION, RELEASE_PAGE, download_release, find_new_release,
+    mark_auto_check, should_auto_check, start_installer, supported_for_install,
+)
 
 
 class CounterApp(ttk.Frame):
@@ -30,18 +34,20 @@ class CounterApp(ttk.Frame):
         self._dashboard = DashboardServer(db_path)
         self._closed = False
         self._firewall_check_active = False
+        self._update_busy = False
         self._settings_file = settings_path(db_path)
         self._settings = load_settings(self._settings_file)
         self.hotkeys_enabled = tk.BooleanVar(value=self._settings["global_hotkeys"])
         self.tray_enabled = tk.BooleanVar(value=self._settings["system_tray"])
         self.dashboard_enabled = tk.BooleanVar(value=self._settings["lan_dashboard"])
+        self.auto_updates = tk.BooleanVar(value=self._settings["auto_updates"])
         self.dashboard_address = tk.StringVar(value="LAN dashboard off")
 
         master.title("CreapKeeper — Office Encounter Tracker")
-        master.minsize(650, 600)
+        master.minsize(650, 665)
         self.pack(fill="both", expand=True)
 
-        ttk.Label(self, text="CreapKeeper", font=("Segoe UI", 17, "bold")).pack(anchor="w")
+        ttk.Label(self, text=f"CreapKeeper v{APP_VERSION}", font=("Segoe UI", 17, "bold")).pack(anchor="w")
         ttk.Label(
             self, text="Tracking unsolicited office encounters since 2017."
         ).pack(anchor="w", pady=(3, 12))
@@ -125,6 +131,16 @@ class CounterApp(ttk.Frame):
             tools_row, text="Hide to tray", command=self.hide_to_tray
         ).pack(side="right")
 
+        update_frame = ttk.LabelFrame(self, text="Updates", padding=9)
+        update_frame.pack(fill="x", pady=(2, 7))
+        ttk.Checkbutton(
+            update_frame, text="Check GitHub for new releases automatically (once per day)",
+            variable=self.auto_updates, command=self.configure_background,
+        ).pack(side="left")
+        ttk.Button(
+            update_frame, text="Check for updates", command=self.check_for_updates,
+        ).pack(side="right")
+
         self.status = tk.StringVar(value=f"Database: {database_path(db_path)}")
         ttk.Label(self, textvariable=self.status, wraplength=580).pack(anchor="w")
 
@@ -137,6 +153,9 @@ class CounterApp(ttk.Frame):
         self.refresh()
         self.configure_background(startup=True)
         self._poll_job = master.after(75, self._drain_events)
+        if (self.auto_updates.get() and supported_for_install()
+                and should_auto_check(self._settings_file)):
+            master.after(2500, lambda: self.check_for_updates(silent=True))
 
     def _handle(self, action) -> None:
         try:
@@ -252,6 +271,7 @@ class CounterApp(ttk.Frame):
             "global_hotkeys": self.hotkeys_enabled.get(),
             "system_tray": self.tray_enabled.get(),
             "lan_dashboard": self.dashboard_enabled.get(),
+            "auto_updates": self.auto_updates.get(),
         }
         if effective != self._settings:
             try:
@@ -344,6 +364,82 @@ class CounterApp(ttk.Frame):
                 + "  Check the rule manually or ask your administrator."
             )
 
+    def check_for_updates(self, silent: bool = False) -> None:
+        """Perform network I/O on a worker and deliver the result via Tk's queue."""
+        if self._closed or self._update_busy:
+            return
+        self._update_busy = True
+        if not silent:
+            self.status.set("Checking GitHub for CreapKeeper updates...")
+
+        def worker() -> None:
+            try:
+                found = find_new_release()
+                error = None
+            except Exception as exc:
+                found, error = None, str(exc)
+            if silent:
+                mark_auto_check(self._settings_file)
+            self._events.put(("update-check", silent, found, error))
+
+        threading.Thread(target=worker, daemon=True, name="CreapKeeperUpdateCheck").start()
+
+    def _update_check_result(self, silent, release, error) -> None:
+        self._update_busy = False
+        if error:
+            if not silent:
+                messagebox.showwarning("CreapKeeper update check", error, parent=self.master)
+            self.status.set("Update check unavailable. Existing features are unaffected.")
+            return
+        if release is None:
+            if not silent:
+                self.status.set(f"CreapKeeper v{APP_VERSION} is up to date.")
+            return
+        prompt = (
+            f"CreapKeeper v{release.version} is available on GitHub.\n\n"
+            f"Installed version: v{APP_VERSION}\n\n"
+        )
+        if supported_for_install():
+            prompt += "Download, verify and install it now? The app will restart."
+        else:
+            prompt += "This source build cannot self-update. Open the GitHub release page?"
+        if not messagebox.askyesno("A new CreapKeeper is lurking!", prompt, parent=self.master):
+            self.status.set(f"Update v{release.version} available. Check again whenever you like.")
+            return
+        if not supported_for_install():
+            webbrowser.open(release.page)
+            return
+        self._update_busy = True
+        self.status.set(f"Downloading and verifying CreapKeeper v{release.version}...")
+
+        def worker() -> None:
+            try:
+                downloaded = download_release(release)
+                error = None
+            except Exception as exc:
+                downloaded, error = None, str(exc)
+            self._events.put(("update-download", release, downloaded, error))
+
+        threading.Thread(target=worker, daemon=True, name="CreapKeeperUpdateDownload").start()
+
+    def _update_download_result(self, release, downloaded, error) -> None:
+        self._update_busy = False
+        if error:
+            self.status.set("Update download failed; existing installation is unchanged.")
+            messagebox.showerror("CreapKeeper update", error, parent=self.master)
+            return
+        try:
+            start_installer(downloaded, release)
+        except Exception as exc:
+            self.status.set("Automatic installation unavailable; current version is safe.")
+            messagebox.showerror(
+                "Could not install update",
+                f"{exc}\n\nDownload manually at: {RELEASE_PAGE}",
+                parent=self.master,
+            )
+            return
+        self.exit_app()
+
     def _drain_events(self) -> None:
         """Receive hotkeys/tray menu clicks only on the Tk main thread."""
         if self._closed:
@@ -353,12 +449,18 @@ class CounterApp(ttk.Frame):
                 action = self._events.get_nowait()
             except queue.Empty:
                 break
-            if isinstance(action, tuple) and action[0] == "firewall-check":
+            if isinstance(action, tuple) and action[0] == "update-check":
+                self._update_check_result(*action[1:])
+            elif isinstance(action, tuple) and action[0] == "update-download":
+                self._update_download_result(*action[1:])
+            elif isinstance(action, tuple) and action[0] == "firewall-check":
                 self._firewall_result(*action[1:])
             elif action in ("count", "creap"):
                 self.record(action)
             elif action == "undo":
                 self.undo()
+            elif action == "check-updates":
+                self.check_for_updates()
             elif action == "show":
                 self.master.deiconify()
                 self.master.lift()
