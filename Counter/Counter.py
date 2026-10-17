@@ -428,6 +428,15 @@ class CounterApp(ttk.Frame):
             self.status.set("Update download failed; existing installation is unchanged.")
             messagebox.showerror("CreapKeeper update", error, parent=self.master)
             return
+        messagebox.showinfo(
+            "Ready to install CreapKeeper",
+            "The update has been downloaded and verified. After you click OK, "
+            "CreapKeeper will close to install it.\n\n"
+            "It will try to reopen automatically, but if it doesn't, just launch "
+            "CreapKeeper.exe yourself from the same folder. Your counts and settings "
+            "will still be there.",
+            parent=self.master,
+        )
         try:
             start_installer(downloaded, release)
         except Exception as exc:
