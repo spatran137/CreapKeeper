@@ -12,6 +12,7 @@ DEFAULTS = {
     "global_hotkeys": os.name == "nt",
     "system_tray": os.name == "nt",
     "lan_dashboard": False,  # Never expose network service without opting in.
+    "auto_updates": os.name == "nt",  # User can opt out of GitHub checks.
 }
 
 
