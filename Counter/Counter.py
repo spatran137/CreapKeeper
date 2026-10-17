@@ -396,9 +396,9 @@ class CounterApp(ttk.Frame):
                 self.status.set(f"CreapKeeper v{APP_VERSION} is up to date.")
             return
         prompt = (
-            f"CreapKeeper v{release.version} is available on GitHub.\\n\\n"
-            f"Installed version: v{APP_VERSION}\\n\\n"
-        ).replace("\\\\n", "\\n")
+            f"CreapKeeper v{release.version} is available on GitHub.\n\n"
+            f"Installed version: v{APP_VERSION}\n\n"
+        )
         if supported_for_install():
             prompt += "Download, verify and install it now? The app will restart."
         else:
@@ -434,7 +434,7 @@ class CounterApp(ttk.Frame):
             self.status.set("Automatic installation unavailable; current version is safe.")
             messagebox.showerror(
                 "Could not install update",
-                f"{exc}\\n\\nDownload manually at: {RELEASE_PAGE}".replace("\\\\n", "\\n"),
+                f"{exc}\n\nDownload manually at: {RELEASE_PAGE}",
                 parent=self.master,
             )
             return
