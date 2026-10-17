@@ -24,6 +24,7 @@ Naturally, we responded like responsible IT professionals: **we made a counter.*
 - **Optional system tray** for discreetly maintaining your extremely official unofficial statistics.
 - **Opt-in LAN chart** so coworkers can watch the two legendary approaches compete in real time.
 - **Consent-based Windows Firewall check** because the scoreboard's greatest enemy turned out to be TCP 8765.
+- **Optional GitHub update checks and integrity-verified one-click Windows upgrades**, because apparently this inside joke needed a release engineering department.
 - Date/time-stamped SQLite history
 - Undo for those moments when you accuse the wrong approach.
 - CSV export and idempotent import of the old 2017 database format
@@ -37,6 +38,22 @@ The portable Windows app is now **[CreapKeeper.exe](https://github.com/spatran13
 **Your counts are safe:** We intentionally retain the old default `%LOCALAPPDATA%\Counter\Counter.db` file and adjacent `settings.json`. The `COUNTER_DB_PATH` setting and the `count` and `creap` event identifiers are unchanged. **Do not rename or delete the old data directory.** This is a new name, not a migration.
 
 A Windows Firewall rule tied to the old `Counter.exe` path may not apply to the newly named executable. Port-only TCP 8765 rules should keep working; use the application's **Check firewall** button to verify access.
+
+## Built-in updates (v1.3.0 — now with even more infrastructure)
+
+Starting with **CreapKeeper v1.3.0**, the packaged Windows app can check GitHub for newer stable releases and install them without visiting a download page. The initial upgrade from **v1.2.0 to v1.3.0 must be manual**, since earlier versions had no updater. After that, it can upgrade itself.
+
+- **Check for updates** in the main window, or from the system-tray menu, to check on demand.
+- **Check GitHub for new releases automatically** is enabled by default on Windows. When the packaged application starts, it checks at most once per 24 hours; untick the setting to disable outbound checks.
+- If a higher stable version exists, CreapKeeper asks whether to update or do it later. **It never downloads or installs a new executable without your consent.**
+- The updater downloads the matching `CreapKeeper.exe` release asset over HTTPS and requires the **SHA-256 digest supplied by GitHub Releases** to match, along with the advertised file size. If metadata is missing or validation fails, installation is cancelled.
+- Windows has to close the existing executable before replacing it. A temporary PowerShell helper stages a verified copy beside the old executable, waits for the app to exit, creates a `CreapKeeper.exe.previous` backup, replaces the app, and restarts it. Your SQLite database and `settings.json` are **never replaced**.
+- If the executable is in a protected folder such as `C:\Program Files`, automatic installation may fail without write permissions. CreapKeeper stays open and you can download/install from [GitHub Releases](https://github.com/spatran137/CreapKeeper/releases/latest) manually.
+- When running from Python source, **Check for updates** can open the GitHub release page, but it does not attempt to overwrite your source checkout.
+- The update process needs **outbound HTTPS to api.github.com and GitHub release download hosts**. If internet is unavailable, CreapKeeper continues operating normally and **The Creap Report remains LAN-only**. The optional network request sends no encounter history, database, or statistics.
+- The updater runs with your existing user permissions and does not request elevation. Do not place the portable executable in a folder you cannot write to if you want automatic upgrades.
+
+No custom update server, GitHub token, background Windows service, or installer package required. We have attempted to keep at least *one* part of this project simple.
 
 ## Requirements (mercifully reasonable)
 
@@ -61,7 +78,7 @@ Click **+1 Count** when someone announces their presence, or **+1 Creap** when t
 
 **System tray (Windows):** The tray icon is enabled by default in the Windows release. With the tray checkbox enabled, closing the window hides CreapKeeper instead of exiting, and global shortcuts stay active. Right-click the notification-area icon to show CreapKeeper, record an event, undo, or **Exit CreapKeeper** to actually quit. You can disable the tray icon at any time in the window. The **Hide to tray** button does the same thing as closing the window with tray mode enabled.
 
-The app remembers the hotkey, tray and dashboard settings in `settings.json` next to your selected SQLite database. Existing history remains unchanged when upgrading from v1.0.0. Hotkeys and tray integration are currently **Windows-only**; the basic GUI and CLI work on other platforms.
+The app remembers the hotkey, tray, dashboard and automatic-update settings in `settings.json` next to your selected SQLite database. Existing history remains unchanged when upgrading from v1.0.0. Hotkeys and tray integration are currently **Windows-only**; the basic GUI and CLI work on other platforms.
 
 The GUI shows totals and 20 recent entries. **Undo last click** removes only the most recent manually recorded event. Imported history remains untouched; even this project has standards.
 
@@ -129,7 +146,7 @@ By default, the SQLite file is stored outside your Git checkout:
 | Linux | ~/.local/share/counter/Counter.db |
 | macOS | ~/.local/share/counter/Counter.db |
 
-On Linux, XDG_DATA_HOME is respected. CreapKeeper does not make outbound network connections. The optional LAN dashboard is disabled by default and only shares aggregate data after you enable it.
+On Linux, XDG_DATA_HOME is respected. CreapKeeper only makes outbound network requests when its optional GitHub update-check feature is enabled or you manually check/install a release. Those requests never include encounter data. The separate LAN dashboard is disabled by default and only shares aggregate data after you enable it.
 
 ## Import your original 2017 database (preserve the legend)
 
@@ -153,7 +170,7 @@ From the repository root:
 
     python -m unittest discover -s tests -v
 
-The automated tests cover data creation, counts, undo, CSV export, legacy import, environment configuration, desktop settings, hotkey routing, LAN HTTP routes, read-only firewall inspection, UAC request handling (mocked), and basic CLI operation. Automated tests do not emulate keyboard presses or an interactive desktop session. The desktop UI additionally requires a manual smoke test.
+The automated tests cover data creation, counts, undo, CSV export, legacy import, environment configuration, desktop settings, GitHub release parsing and download integrity checks, hotkey routing, LAN HTTP routes, read-only firewall inspection, UAC request handling (mocked), and basic CLI operation. Automated tests do not emulate keyboard presses or an interactive desktop session. The desktop UI additionally requires a manual smoke test.
 
 ## Original project (circa 2017)
 
