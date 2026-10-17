@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 REPO = "spatran137/CreapKeeper"
 RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASE_PAGE = f"https://github.com/{REPO}/releases/latest"
@@ -139,6 +139,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $backup = "$InstalledPath.previous"
+$backupMade = $false
 try {
     for ($i = 0; $i -lt 120; $i++) {
         if (-not (Get-Process -Id $ParentProcessId -ErrorAction SilentlyContinue)) { break }
@@ -150,21 +151,34 @@ try {
     if ((Get-FileHash -LiteralPath $NewPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $ExpectedSha256) {
         throw 'The staged update did not pass SHA-256 verification.'
     }
+    # Only installation failures should trigger a rollback.
     Copy-Item -LiteralPath $InstalledPath -Destination $backup -Force
+    $backupMade = $true
     Copy-Item -LiteralPath $NewPath -Destination $InstalledPath -Force
-    Start-Process -FilePath $InstalledPath
     Remove-Item -LiteralPath $NewPath -Force -ErrorAction SilentlyContinue
 } catch {
-    $errorText = $_.Exception.Message
+    $errorText = "Update installation failed: $($_.Exception.Message)"
     try {
-        if (Test-Path -LiteralPath $backup) {
+        if ($backupMade) {
             Copy-Item -LiteralPath $backup -Destination $InstalledPath -Force
-            Start-Process -FilePath $InstalledPath
         }
     } catch { $errorText += "; restore failed: $($_.Exception.Message)" }
     try {
-        $log = Join-Path $env:LOCALAPPDATA 'Counter\updater-error.txt'
-        $errorText | Out-File -LiteralPath $log -Encoding utf8
+        $logDirectory = Join-Path $env:LOCALAPPDATA 'Counter'
+        New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+        $errorText | Out-File -LiteralPath (Join-Path $logDirectory 'updater-error.txt') -Encoding utf8
+    } catch {}
+    exit 1
+}
+# Restart is strictly best-effort. A failed launch must NEVER revert a good update.
+try {
+    Start-Process -FilePath $InstalledPath
+} catch {
+    try {
+        $logDirectory = Join-Path $env:LOCALAPPDATA 'Counter'
+        New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+        "CreapKeeper updated successfully, but automatic restart failed: $($_.Exception.Message). Open CreapKeeper.exe manually." |
+            Out-File -LiteralPath (Join-Path $logDirectory 'updater-error.txt') -Encoding utf8
     } catch {}
 }
 """

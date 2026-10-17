@@ -145,7 +145,7 @@ Starting with **v1.3.0**, yes.
 
 On the packaged Windows version, **Check GitHub for new releases automatically** is enabled by default. When it starts, it checks at most once every 24 hours. You can disable the setting or click **Check for updates** whenever you want. There is also a tray-menu option.
 
-When there is a newer stable release, CreapKeeper asks whether you want it. If you approve, it downloads the `CreapKeeper.exe` release asset over HTTPS, checks its file size and GitHub-provided SHA-256 digest, then stages it next to the existing executable. A temporary helper waits for CreapKeeper to close, keeps a `CreapKeeper.exe.previous` backup, replaces the executable, and restarts the app.
+When there is a newer stable release, CreapKeeper asks whether you want it. If you approve, it downloads the `CreapKeeper.exe` release asset over HTTPS, checks its file size and GitHub-provided SHA-256 digest, then stages it next to the existing executable. A temporary helper waits for CreapKeeper to close, keeps a `CreapKeeper.exe.previous` backup, and replaces the executable. It **tries** to reopen CreapKeeper, but the update is still considered successful if Windows can't relaunch the app. Simply reopen `CreapKeeper.exe` yourself; a restart failure will **not** roll back a good installation.
 
 A few limits worth mentioning:
 
@@ -155,6 +155,7 @@ A few limits worth mentioning:
 - If a network check or integrity check fails, the current version stays in place.
 - If the executable is in a protected folder such as `C:\Program Files`, the update may fail due to permissions. Use a user-writable folder or install manually.
 - The updater does not modify the database or settings.
+- **v1.3.1** fixes the Windows installer so a failure to reopen the app does not roll back the successfully replaced executable. If the helper reports a problem, you can find details under `%LOCALAPPDATA%\Counter\updater-error.txt`.
 - Running from Python source can check GitHub and open the release page, but it will not replace a source checkout.
 
 The SHA-256 comparison verifies that the download matches the asset information from GitHub. It is not a substitute for a code-signing certificate. The background update helper and restart behavior still need hands-on testing on a Windows desktop; automated tests cover versioning, metadata checks, failure cases, and downloads.
