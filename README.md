@@ -31,7 +31,7 @@ Everything that counts an encounter is still done locally. The LAN page shows to
 
 The easiest option for Windows is to download the latest **[CreapKeeper.exe](https://github.com/spatran137/CreapKeeper/releases/latest)**. This is a portable executable; there is no separate Python installation required.
 
-1. Download \`CreapKeeper.exe\` from the latest release.
+1. Download `CreapKeeper.exe` from the latest release.
 2. Put it somewhere your Windows account can write to if you want automatic updates later (for example, a folder under your user profile).
 3. Run it and start counting.
 
@@ -39,21 +39,21 @@ The executable is not code-signed, so Windows SmartScreen might warn you about a
 
 ### Running from source
 
-You will need Python **3.10 or newer**. For the GUI, Tkinter is also needed (included in the normal Windows Python installation; some Linux distributions package it as \`python3-tk\`).
+You will need Python **3.10 or newer**. For the GUI, Tkinter is also needed (included in the normal Windows Python installation; some Linux distributions package it as `python3-tk`).
 
 From the repository root:
 
-\`\`\`powershell
+```powershell
 python Counter/CreapKeeper.py
-\`\`\`
+```
 
 To use the optional Windows tray icon when running from source:
 
-\`\`\`powershell
+```powershell
 python -m pip install -r requirements-gui.txt
-\`\`\`
+```
 
-The older launcher \`python Counter/Counter.py\` still works. I left the original paths in place for compatibility.
+The older launcher `python Counter/Counter.py` still works. I left the original paths in place for compatibility.
 
 ## Using the counter
 
@@ -89,7 +89,7 @@ So the application hosts a small webpage itself.
 1. Open CreapKeeper on the computer recording the events.
 2. Check **Share read-only chart on local LAN (HTTP port 8765)**.
 3. Click **Open dashboard** to test it on that computer.
-4. Click **Copy LAN link**, or open \`http://YOUR-PC-IP:8765/\` from another computer on the same LAN.
+4. Click **Copy LAN link**, or open `http://YOUR-PC-IP:8765/` from another computer on the same LAN.
 
 The page has one line for **Count** and another for **Creap**, with daily cumulative totals for the most recent 30 days. It refreshes every 30 seconds. The HTML and chart code are bundled with CreapKeeper, so viewers do not need internet access.
 
@@ -113,29 +113,29 @@ You can also click **Check firewall** at any time. Disabling the dashboard does 
 
 To remove only the rule created with CreapKeeper's standard name, open PowerShell **as Administrator** and run:
 
-\`\`\`powershell
+```powershell
 Remove-NetFirewallRule -Name "Counter-LAN-Dashboard-8765"
-\`\`\`
+```
 
 If automatic setup is blocked by your organization's policy, check for an existing matching rule first. For a manual exception on a trusted Private/Domain LAN, an administrator can run:
 
-\`\`\`powershell
+```powershell
 New-NetFirewallRule -Name "Counter-LAN-Dashboard-8765" -DisplayName "CreapKeeper LAN Dashboard" -Direction Inbound -Protocol TCP -LocalPort 8765 -Profile Private,Domain -RemoteAddress LocalSubnet -Action Allow
-\`\`\`
+```
 
 To troubleshoot, on the CreapKeeper computer check whether the web server is listening:
 
-\`\`\`powershell
+```powershell
 Get-NetTCPConnection -LocalPort 8765 -State Listen
-\`\`\`
+```
 
 Then test from a second Windows computer (replace the address):
 
-\`\`\`powershell
+```powershell
 Test-NetConnection 192.168.1.100 -Port 8765
-\`\`\`
+```
 
-If the test fails, look at the Windows network profile with \`Get-NetConnectionProfile\`, the effective firewall rules, and whether the other computer is on another subnet or VLAN. \`LocalSubnet\` normally does not include other VLANs. Also, an allow rule will not override a higher-priority block from your organization's security policies.
+If the test fails, look at the Windows network profile with `Get-NetConnectionProfile`, the effective firewall rules, and whether the other computer is on another subnet or VLAN. `LocalSubnet` normally does not include other VLANs. Also, an allow rule will not override a higher-priority block from your organization's security policies.
 
 ## Updating CreapKeeper (v1.3.0 and later)
 
@@ -145,7 +145,7 @@ Starting with **v1.3.0**, yes.
 
 On the packaged Windows version, **Check GitHub for new releases automatically** is enabled by default. When it starts, it checks at most once every 24 hours. You can disable the setting or click **Check for updates** whenever you want. There is also a tray-menu option.
 
-When there is a newer stable release, CreapKeeper asks whether you want it. If you approve, it downloads the \`CreapKeeper.exe\` release asset over HTTPS, checks its file size and GitHub-provided SHA-256 digest, then stages it next to the existing executable. A temporary helper waits for CreapKeeper to close, keeps a \`CreapKeeper.exe.previous\` backup, replaces the executable, and restarts the app.
+When there is a newer stable release, CreapKeeper asks whether you want it. If you approve, it downloads the `CreapKeeper.exe` release asset over HTTPS, checks its file size and GitHub-provided SHA-256 digest, then stages it next to the existing executable. A temporary helper waits for CreapKeeper to close, keeps a `CreapKeeper.exe.previous` backup, replaces the executable, and restarts the app.
 
 A few limits worth mentioning:
 
@@ -153,7 +153,7 @@ A few limits worth mentioning:
 - The updater needs **outbound internet access** to GitHub. The LAN dashboard does not.
 - Updates are **never installed without your approval**. You can disable automatic release checks.
 - If a network check or integrity check fails, the current version stays in place.
-- If the executable is in a protected folder such as \`C:\Program Files\`, the update may fail due to permissions. Use a user-writable folder or install manually.
+- If the executable is in a protected folder such as `C:\Program Files`, the update may fail due to permissions. Use a user-writable folder or install manually.
 - The updater does not modify the database or settings.
 - Running from Python source can check GitHub and open the release page, but it will not replace a source checkout.
 
@@ -165,22 +165,22 @@ One thing I did not want was an app rename or update wiping out years of history
 
 | OS | Database |
 | --- | --- |
-| Windows | \`%LOCALAPPDATA%\Counter\Counter.db\` |
-| Linux / macOS | \`~/.local/share/counter/Counter.db\` |
+| Windows | `%LOCALAPPDATA%\Counter\Counter.db` |
+| Linux / macOS | `~/.local/share/counter/Counter.db` |
 
-Settings are saved in \`settings.json\` next to the selected database. You can specify a different database using \`--db PATH\` or the existing \`COUNTER_DB_PATH\` environment variable.
+Settings are saved in `settings.json` next to the selected database. You can specify a different database using `--db PATH` or the existing `COUNTER_DB_PATH` environment variable.
 
-If you were using **Counter.exe** before the rename, close it completely from the tray and launch **CreapKeeper.exe**. Your old counts should be there automatically. Do **not** rename or delete the \`Counter\` data folder.
+If you were using **Counter.exe** before the rename, close it completely from the tray and launch **CreapKeeper.exe**. Your old counts should be there automatically. Do **not** rename or delete the `Counter` data folder.
 
 ## Bringing in the 2017 database
 
-The original app used a \`Counter.db\` with a \`tb_count\` table containing \`COUNT\`, \`CREAP\`, and \`DATE\`.
+The original app used a `Counter.db` with a `tb_count` table containing `COUNT`, `CREAP`, and `DATE`.
 
 Make a backup of that original file first. Then use **Import old DB** in the GUI, or run:
 
-\`\`\`powershell
+```powershell
 python Counter/cli.py import-legacy "C:\path\to\old\Counter.db"
-\`\`\`
+```
 
 The importer reads the old file without modifying it. Importing the same source path again skips records already brought over. Older timestamps are interpreted in the computer's current local time zone, so check that if the data came from another location.
 
@@ -188,14 +188,14 @@ The importer reads the old file without modifying it. Importing the same source 
 
 The original scripts still work:
 
-\`\`\`powershell
+```powershell
 python Counter/count.py
 python Counter/creap.py
-\`\`\`
+```
 
 For more options:
 
-\`\`\`powershell
+```powershell
 python Counter/cli.py count
 python Counter/cli.py creap
 python Counter/cli.py stats
@@ -203,19 +203,19 @@ python Counter/cli.py history --limit 10
 python Counter/cli.py undo
 python Counter/cli.py export encounters.csv
 python Counter/cli.py stats --db "C:\Temp\Counter.db"
-\`\`\`
+```
 
 ## Testing and a few final notes
 
 From the repository root:
 
-\`\`\`powershell
+```powershell
 python -m unittest discover -s tests -v
-\`\`\`
+```
 
 The tests cover the database, legacy imports, desktop preferences, hotkey mapping, dashboard routes, firewall checks, and GitHub update validation. GitHub Actions runs tests on Windows and Linux and builds the Windows executable. Actual hotkeys, system tray behavior, Windows Firewall UAC, and self-replacement are still worth testing on a real Windows desktop.
 
-The original \`Counter.sln\` and old Python entry points remain in the repo. I kept them partly for compatibility and partly because I like being able to look back at where the project started.
+The original `Counter.sln` and old Python entry points remain in the repo. I kept them partly for compatibility and partly because I like being able to look back at where the project started.
 
 ### Final thoughts
 
