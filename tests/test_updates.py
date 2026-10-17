@@ -97,6 +97,17 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "packaged Windows"):
                 updates.start_installer(Path("nowhere.exe"), updates.Release("1.4.0", "", "", "", 1))
 
+    def test_restart_failure_does_not_trigger_rollback(self):
+        # The Windows helper installs/rolls back independently of starting the app.
+        # A restart failure must never restore an older executable.
+        script = updates._HELPER_SCRIPT
+        self.assertIn("Copy-Item -LiteralPath $NewPath -Destination $InstalledPath -Force", script)
+        self.assertIn('exit 1', script)
+        self.assertEqual(script.count('Start-Process -FilePath $InstalledPath'), 1)
+        self.assertGreater(script.index('Start-Process -FilePath $InstalledPath'),
+                           script.index('exit 1'))
+        self.assertIn('updated successfully, but automatic restart failed', script)
+
     def test_version_matches_documented_release(self):
         workflow = (Path(__file__).resolve().parents[1] /
                     ".github" / "workflows" / "publish-release.yml").read_text()
